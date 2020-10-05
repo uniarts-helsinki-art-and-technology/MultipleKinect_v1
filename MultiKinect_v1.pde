@@ -307,7 +307,7 @@ void drawMergedPoinCloud() {
   }
   popMatrix();
   // Rotate
-  //a += 0.015f;
+  a += 0.015f;
 } 
 
 
