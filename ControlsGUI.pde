@@ -17,7 +17,7 @@ void setupGUI() {
     .setPosition(100, 100)
     .setRange(-4, 4)
      .setSize(800, 30)
-    .setValue(-0.16)
+    .setValue(0.13)
     ;
   cp5.addSlider("offsetZ")
     .setPosition(100, 150)

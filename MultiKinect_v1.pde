@@ -1,4 +1,4 @@
-// Thomas Sanchez Lengeling //<>// //<>//
+// Thomas Sanchez Lengeling //<>// //<>// //<>//
 // Multi Kinect with all features
 // Example connecting multiple Kinects v1 on a single Mac
 
@@ -19,8 +19,11 @@ boolean ir = false;
 boolean colorDepth = false;
 boolean showGui = false;
 boolean capture = false;
+boolean pause = false;
+boolean axisY = false;
 
 int numDevices = 0;
+int scanrate = 0;
 
 //index to change the current device changes
 int deviceIndex = 0;
@@ -37,11 +40,11 @@ float[] depthLookUp = new float[2048];
 // Angle for rotation
 float a = 0;
 
-ArrayList<PVector> depth1 = new ArrayList<PVector>(); 
-ArrayList<PVector> depth2 = new ArrayList<PVector>(); 
+ArrayList<PVector> depth1 = new ArrayList<PVector>();
+ArrayList<PVector> depth2 = new ArrayList<PVector>();
 
-ArrayList<PVector> color1 = new ArrayList<PVector>(); 
-ArrayList<PVector> color2 = new ArrayList<PVector>(); 
+ArrayList<PVector> color1 = new ArrayList<PVector>();
+ArrayList<PVector> color2 = new ArrayList<PVector>();
 
 boolean recorded = false;
 
@@ -70,7 +73,7 @@ void setup() {
 
   //  multiKinect.add(tmpKinect);
   //}
-  
+ 
     // Load a soundfile
   soundfile = new SoundFile(this, "Scan Sound Effect.mp3");
 
@@ -117,7 +120,7 @@ void draw() {
     tmpKinect.initDepth();
     tmpKinect.initVideo();
     println("kinect 1");
-  } 
+  }
 */
 
   if (!recorded) {
@@ -130,10 +133,10 @@ void draw() {
 
 if(capture)
 {
-  
+ 
   // Play the file in a loop
-  soundfile.start();
-  
+  soundfile.play();
+ 
   if (!recorded) {
 
     recordPointCloud1();
@@ -185,6 +188,15 @@ void gui() {
 }
 
 void keyPressed() {
+  
+  if (key == 'r') {
+    axisY = !axisY;
+  }
+  
+  if (key == 'p') {
+   pause = !pause;
+    
+  }
 
   if (key == 'e') {
 
@@ -192,7 +204,7 @@ void keyPressed() {
 //    exportMergedPointCloud();
     exportMergedPointCloudRGB();
   }
-  
+ 
   if( key == 'c')
   {
     capture = true;
@@ -230,9 +242,9 @@ void keyPressed() {
  //   deg = constrain(deg, 0, 30);
 //    multiKinect.get(deviceIndex).setTilt(deg);
   }
-  
+ 
 
-  
+ 
 }
 
 
@@ -240,7 +252,7 @@ void recordPointCloud1() {
 
   // Get the raw depth as array of integers
   int[] depth = tmpKinect.getRawDepth();
-  
+ 
       PImage img = tmpKinect.getVideoImage();
 
 
@@ -267,7 +279,7 @@ void recordPointCloud2() {
 
   // Get the raw depth as array of integers
   int[] depth = tmpKinect.getRawDepth();
-  
+ 
         PImage img = tmpKinect.getVideoImage();
 
 
@@ -283,7 +295,7 @@ void recordPointCloud2() {
       int loc = y * tmpKinect.width+x;
       color c = img.pixels[loc];
       PVector col = new PVector(red(c), green(c), blue(c));
-        
+       
       color2.add(col);
       depth2.add(v);
     }
@@ -325,28 +337,28 @@ void exportMergedPointCloudRGB() {
   String[] pointCloud = new String[2 * tmpKinect.width * tmpKinect.height + 1];
   pointCloud[0] = "X Y Z R G B";
  
-  for (int x = 0; x < tmpKinect.width; x ++) 
+  for (int x = 0; x < tmpKinect.width; x ++)
   {
     for (int y = 0; y < tmpKinect.height; y ++)
     {
       int offset = x + y*tmpKinect.width;
-      
+     
       PVector v1 = depth1.get(offset);
       PVector c1 = color1.get(offset);
-      
+     
       if (v1.x > minX && v1.x < maxX && v1.y > minY && v1.y < maxY && v1.z > minZ && v1.z < maxZ) {
-        
+       
       float r1 = c1.x;
       float g1 = c1.y;
       float b1 = c1.z;
-      
+     
         pointCloud[2*offset+1] = v1.x*factor + " " + v1.y*factor + " " + (factor-v1.z*factor) + " " + r1 + " " + g1 + " " + b1;
       } else {      
   //      pointCloud[2*offset+1] = "-10 -10 -10 0 0 0";
       }
       PVector v2 = depth2.get(offset);
       PVector c2 = color2.get(offset);
-      
+     
       float r2 = c2.x;
       float g2 = c2.y;
       float b2 = c2.z;
@@ -354,7 +366,7 @@ void exportMergedPointCloudRGB() {
       PVector v2Offset = PVector.add(v2, new PVector(offsetX, offsetY, offsetZ));
       if (-v2Offset.x > minX && -v2Offset.x < maxX && v2Offset.y > minY && v2Offset.y < maxY && -v2Offset.z > minZ && -v2Offset.z < maxZ) {
         pointCloud[2*offset+2] = -v2Offset.x*factor + " " + v2Offset.y*factor + " " + (factor + v2Offset.z*factor) + " " + r2 + " " + g2 + " " + b2;
-        
+       
       } else {
     //    pointCloud[2*offset+2] = "-10 -10 -10 0 0 0";
       }
@@ -374,10 +386,14 @@ void drawMergedPoinCloud() {
   pushMatrix();
   // Translate and rotate
   translate(width/2, height/2, -50);
+  if(axisY){
   rotateY(a);
+  }else{
+   rotateX(a);
+  }
 
   for (int x = 0; x < tmpKinect.width; x += skip) {
-    for (int y = 0; y < tmpKinect.height; y += skip) {
+    for (int y = 0; y < scanrate; y += skip) {
       int offset = x + y*tmpKinect.width;
       PVector v1 = depth1.get(offset);
       PVector v2 = depth2.get(offset);
@@ -387,7 +403,7 @@ void drawMergedPoinCloud() {
       //v2.set(v2.x,v2.y,-v22D.y);
 
       PVector v2Offset = PVector.add(v2, new PVector(offsetX, offsetY, offsetZ));
-      stroke(255);
+      stroke(0);
       pushMatrix();
       // Scale up by 200
 
@@ -399,7 +415,7 @@ void drawMergedPoinCloud() {
       point(0, 0);
       popMatrix();
       pushMatrix();
-      stroke(255);
+      stroke(0);
       translate(-v2Offset.x*factor, v2Offset.y*factor, factor + v2Offset.z*factor);
       if (-v2Offset.x > minX && -v2Offset.x < maxX && v2Offset.y > minY && v2Offset.y < maxY && -v2Offset.z > minZ && -v2Offset.z < maxZ) {
         stroke(255, 100, 0);
@@ -410,9 +426,17 @@ void drawMergedPoinCloud() {
     }
   }
   popMatrix();
+  
+  if(pause == false){
   // Rotate
   a += 0.015f;
-} 
+  }
+  if(scanrate<tmpKinect.height)
+  {
+  scanrate++;
+  }
+  
+}
 
 
 void drawPoinCloud() {
