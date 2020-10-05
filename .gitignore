@@ -1,0 +1,5 @@
+# ignore all following files
+*.xyz
+*.XYZ
+*.txt
+*.mp3
