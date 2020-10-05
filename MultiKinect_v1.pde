@@ -37,7 +37,7 @@ ArrayList<PVector> depth2 = new ArrayList<PVector>();
 
 boolean recorded = false;
 
-float offsetX, offsetY, offsetZ;
+float offsetX, offsetY, offsetZ, minX, maxX, minY, maxY, minZ, maxZ;
 
 float factor = 200;
 
@@ -240,18 +240,26 @@ void exportMergedPointCloud() {
     for (int y = 0; y < tmpKinect.height; y ++) {
       int offset = x + y*tmpKinect.width;
       PVector v1 = depth1.get(offset);
+      if (v1.x > minX && v1.x < maxX && v1.y > minY && v1.y < maxY && v1.z > minZ && v1.z < maxZ) {
+
+        pointCloud[2*offset+1] = v1.x*factor + " " + v1.y*factor + " " + (factor-v1.z*factor);
+      } else {      
+        pointCloud[2*offset+1] = "-10 -10 -10";
+      }
       PVector v2 = depth2.get(offset);
-      
+
       PVector v2Offset = PVector.add(v2, new PVector(offsetX, offsetY, offsetZ));
-      pointCloud[2*offset+1] = v1.x*factor + " " + v1.y*factor + " " + (factor-v1.z*factor);
-     
-      pointCloud[2*offset+2] = -v2Offset.x*factor + " " + v2Offset.y*factor + " " + (factor + v2Offset.z*factor);
-     
+      if (-v2Offset.x > minX && -v2Offset.x < maxX && v2Offset.y > minY && v2Offset.y < maxY && -v2Offset.z > minZ && -v2Offset.z < maxZ) {
+        pointCloud[2*offset+2] = -v2Offset.x*factor + " " + v2Offset.y*factor + " " + (factor + v2Offset.z*factor);
+      } else {
+        pointCloud[2*offset+2] = "-10 -10 -10";
+      }
     }
   }
-  
-  saveStrings("pointCloud.XYZ", pointCloud);
-  println("exported point cloud");
+
+
+saveStrings("pointCloud " + millis() + ".XYZ", pointCloud);
+println("exported point cloud");
 }
 
 
@@ -269,22 +277,29 @@ void drawMergedPoinCloud() {
       int offset = x + y*tmpKinect.width;
       PVector v1 = depth1.get(offset);
       PVector v2 = depth2.get(offset);
-      PVector v22D = new PVector(v2.x,v2.z);
+      PVector v22D = new PVector(v2.x, v2.z);
       //v22D.rotate(PI);
       //v2.x = -v2.x;
       //v2.set(v2.x,v2.y,-v22D.y);
-      
+
       PVector v2Offset = PVector.add(v2, new PVector(offsetX, offsetY, offsetZ));
       stroke(255);
       pushMatrix();
       // Scale up by 200
-    
+
       translate(v1.x*factor, v1.y*factor, factor-v1.z*factor);
       // Draw a point
+      if (v1.x > minX && v1.x < maxX && v1.y > minY && v1.y < maxY && v1.z > minZ && v1.z < maxZ) {
+        stroke(255, 100, 0);
+      }
       point(0, 0);
       popMatrix();
       pushMatrix();
+      stroke(255);
       translate(-v2Offset.x*factor, v2Offset.y*factor, factor + v2Offset.z*factor);
+      if (-v2Offset.x > minX && -v2Offset.x < maxX && v2Offset.y > minY && v2Offset.y < maxY && -v2Offset.z > minZ && -v2Offset.z < maxZ) {
+        stroke(255, 100, 0);
+      }
       // Draw a point
       point(0, 0);
       popMatrix();
@@ -292,7 +307,7 @@ void drawMergedPoinCloud() {
   }
   popMatrix();
   // Rotate
-  a += 0.015f;
+  //a += 0.015f;
 } 
 
 
