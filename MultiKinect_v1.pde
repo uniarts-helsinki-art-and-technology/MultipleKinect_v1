@@ -8,12 +8,17 @@
 import org.openkinect.freenect.*;
 import org.openkinect.processing.*;
 
+import processing.sound.*;
+
+SoundFile soundfile;
 
 ArrayList<Kinect> multiKinect;
 
 
 boolean ir = false;
 boolean colorDepth = false;
+boolean showGui = false;
+boolean capture = false;
 
 int numDevices = 0;
 
@@ -35,6 +40,9 @@ float a = 0;
 ArrayList<PVector> depth1 = new ArrayList<PVector>(); 
 ArrayList<PVector> depth2 = new ArrayList<PVector>(); 
 
+ArrayList<PVector> color1 = new ArrayList<PVector>(); 
+ArrayList<PVector> color2 = new ArrayList<PVector>(); 
+
 boolean recorded = false;
 
 float offsetX, offsetY, offsetZ, minX, maxX, minY, maxY, minZ, maxZ;
@@ -50,7 +58,7 @@ void setup() {
   println("number of Kinect v1 devices  "+numDevices);
 
   //creat the arraylist
-  multiKinect = new ArrayList<Kinect>();
+  //multiKinect = new ArrayList<Kinect>();
 
   //iterate though all the devices and activate them
   //for (int i  = 0; i < numDevices; i++) {
@@ -62,6 +70,11 @@ void setup() {
 
   //  multiKinect.add(tmpKinect);
   //}
+  
+    // Load a soundfile
+  soundfile = new SoundFile(this, "Scan Sound Effect.mp3");
+
+
 
   tmpKinect = new Kinect(this);
   tmpKinect.enableColorDepth(colorDepth);
@@ -92,7 +105,8 @@ void draw() {
 
 
 
-  //Kinect tmpKinect = (Kinect)multiKinect.get(0);
+  //Kinect tmpKinect = (Kinect)multiKinect.get(0);/
+  /*
   if (mousePressed & !showKinect2) {
     showKinect2 = true;
     tmpKinect.stopDepth();
@@ -104,18 +118,27 @@ void draw() {
     tmpKinect.initVideo();
     println("kinect 1");
   } 
-
-
-
-  image(tmpKinect.getVideoImage(), 0, 240*1, 320, 240);
-  image(tmpKinect.getDepthImage(), 640, 0);
-
-
-  // drawPoinCloud();
+*/
 
   if (!recorded) {
 
+ image(tmpKinect.getVideoImage(), 0, 240*1, 320, 240);
+//  image(tmpKinect.getDepthImage(), 640, 0);
+  }
+
+  // drawPoinCloud();
+
+if(capture)
+{
+  
+  // Play the file in a loop
+  soundfile.start();
+  
+  if (!recorded) {
+
     recordPointCloud1();
+        println("kinect 1 recorded");
+
     showKinect2 = true;
     tmpKinect.stopDepth();
     tmpKinect.stopVideo();
@@ -124,14 +147,18 @@ void draw() {
     tmpKinect.activateDevice(1);
     tmpKinect.initDepth();
     tmpKinect.initVideo();
-    println("kinect 1");
     recordPointCloud2();
-    recorded = true;
-  }
+            println("kinect 2 recorded");
 
+    recorded = true;
+    capture = false;
+  }
+}
   if (recorded) {
     drawMergedPoinCloud();
   }
+
+
 
   fill(255);
   text("Device Count: " +numDevices + "  \n" +
@@ -143,7 +170,10 @@ void draw() {
     "UP and DOWN to tilt camera : "+deg+"  \n" +
     "Framerate: " + int(frameRate), 660, 100, 280, 250);
 
-  gui();
+    if(showGui)
+    {
+      gui();
+    }
 }
 
 void gui() {
@@ -159,9 +189,18 @@ void keyPressed() {
   if (key == 'e') {
 
 
-    exportMergedPointCloud();
+//    exportMergedPointCloud();
+    exportMergedPointCloudRGB();
   }
-
+  
+  if( key == 'c')
+  {
+    capture = true;
+  }
+  if( key == 'g')
+  {
+    showGui = !showGui;
+  }
 
   if (key == '-') {
     if (deviceIndex > 0 && numDevices > 0) {
@@ -178,21 +217,22 @@ void keyPressed() {
   }
 
 
-  if (key == 'i') {
-    ir = !ir;
-    multiKinect.get(deviceIndex).enableIR(ir);
-  } else if (key == 'c') {
-    colorDepth = !colorDepth;
-    multiKinect.get(deviceIndex).enableColorDepth(colorDepth);
-  } else if (key == CODED) {
+  if (key == CODED) {
     if (keyCode == UP) {
       deg++;
     } else if (keyCode == DOWN) {
       deg--;
     }
-    deg = constrain(deg, 0, 30);
-    multiKinect.get(deviceIndex).setTilt(deg);
+     else if (key == CONTROL)
+  {
+    showGui=!showGui;
   }
+ //   deg = constrain(deg, 0, 30);
+//    multiKinect.get(deviceIndex).setTilt(deg);
+  }
+  
+
+  
 }
 
 
@@ -200,6 +240,9 @@ void recordPointCloud1() {
 
   // Get the raw depth as array of integers
   int[] depth = tmpKinect.getRawDepth();
+  
+      PImage img = tmpKinect.getVideoImage();
+
 
   for (int x = 0; x < tmpKinect.width; x ++) {
     for (int y = 0; y < tmpKinect.height; y ++) {
@@ -209,7 +252,13 @@ void recordPointCloud1() {
       int rawDepth = depth[offset];
       PVector v = depthToWorld(x, y, rawDepth);
 
+      // GET COLOR VALUES
+        int loc = y * tmpKinect.width+x;
+        color c = img.pixels[loc];
+        PVector col = new PVector(red(c), green(c), blue(c));
+
       depth1.add(v);
+      color1.add(col);
     }
   }
 }
@@ -218,6 +267,9 @@ void recordPointCloud2() {
 
   // Get the raw depth as array of integers
   int[] depth = tmpKinect.getRawDepth();
+  
+        PImage img = tmpKinect.getVideoImage();
+
 
   for (int x = 0; x < tmpKinect.width; x ++) {
     for (int y = 0; y < tmpKinect.height; y ++) {
@@ -227,6 +279,12 @@ void recordPointCloud2() {
       int rawDepth = depth[offset];
       PVector v = depthToWorld(x, y, rawDepth);
 
+      // GET COLOR VALUES
+      int loc = y * tmpKinect.width+x;
+      color c = img.pixels[loc];
+      PVector col = new PVector(red(c), green(c), blue(c));
+        
+      color2.add(col);
       depth2.add(v);
     }
   }
@@ -258,8 +316,54 @@ void exportMergedPointCloud() {
   }
 
 
-saveStrings("pointCloud " + millis() + ".XYZ", pointCloud);
+saveStrings("pointCloud " + year() + "-" + month() + "-" + day() + "-" + hour() + "-" + minute() + "-" + second() + "-" + millis() + ".XYZ", pointCloud);
 println("exported point cloud");
+}
+
+void exportMergedPointCloudRGB() {
+
+  String[] pointCloud = new String[2 * tmpKinect.width * tmpKinect.height + 1];
+  pointCloud[0] = "X Y Z R G B";
+ 
+  for (int x = 0; x < tmpKinect.width; x ++) 
+  {
+    for (int y = 0; y < tmpKinect.height; y ++)
+    {
+      int offset = x + y*tmpKinect.width;
+      
+      PVector v1 = depth1.get(offset);
+      PVector c1 = color1.get(offset);
+      
+      if (v1.x > minX && v1.x < maxX && v1.y > minY && v1.y < maxY && v1.z > minZ && v1.z < maxZ) {
+        
+      float r1 = c1.x;
+      float g1 = c1.y;
+      float b1 = c1.z;
+      
+        pointCloud[2*offset+1] = v1.x*factor + " " + v1.y*factor + " " + (factor-v1.z*factor) + " " + r1 + " " + g1 + " " + b1;
+      } else {      
+  //      pointCloud[2*offset+1] = "-10 -10 -10 0 0 0";
+      }
+      PVector v2 = depth2.get(offset);
+      PVector c2 = color2.get(offset);
+      
+      float r2 = c2.x;
+      float g2 = c2.y;
+      float b2 = c2.z;
+
+      PVector v2Offset = PVector.add(v2, new PVector(offsetX, offsetY, offsetZ));
+      if (-v2Offset.x > minX && -v2Offset.x < maxX && v2Offset.y > minY && v2Offset.y < maxY && -v2Offset.z > minZ && -v2Offset.z < maxZ) {
+        pointCloud[2*offset+2] = -v2Offset.x*factor + " " + v2Offset.y*factor + " " + (factor + v2Offset.z*factor) + " " + r2 + " " + g2 + " " + b2;
+        
+      } else {
+    //    pointCloud[2*offset+2] = "-10 -10 -10 0 0 0";
+      }
+    }
+  }
+
+
+saveStrings("pointCloud " + year() + "-" + month() + "-" + day() + "-" + hour() + "-" + minute() + "-" + second() + "-" + millis() + ".XYZ", pointCloud);
+println("exported point cloud RGB");
 }
 
 
